@@ -95,7 +95,7 @@ model.SD_periods = RangeSet(1,model.SimDays+1)
 model.HorizonHours = Param(within=PositiveIntegers)
 model.HH_periods = RangeSet(0,model.HorizonHours)
 model.hh_periods = RangeSet(1,model.HorizonHours)
-model.ramp_periods = RangeSet(2,336)
+model.ramp_periods = RangeSet(2,337)
 
 ######=================================================########
 ######               Segment B.6                       ########

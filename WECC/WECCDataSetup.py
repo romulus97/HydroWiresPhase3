@@ -10,7 +10,7 @@ import numpy as np
 
 SimDays = 365
 SimHours = SimDays * 24
-HorizonHours = 336  ##planning horizon (e.g., 24, 48, 72 hours etc.)
+HorizonHours = 337  ##planning horizon (e.g., 24, 48, 72 hours etc.)
 # TransLoss = 0.075  ##transmission loss as a percent of generation
 # n1criterion = 0.75 ##maximum line-usage as a percent of line-capacity
 # res_margin = 0.15  ##minimum reserve as a percent of system demand
