@@ -20,9 +20,10 @@ from pathlib import Path
 years = [2000]
 
 
-df_load = pd.read_csv('BA_data/BA_load.csv',header=0)
+#df_load = pd.read_csv('BA_data/BA_load.csv',header=0)
 df_BAs = pd.read_csv('BA_data/BAs.csv',header=0)
 BAs = list(df_BAs['Name'])
+BAs_short = list(df_BAs['Abbreviation'])
 
 df_full = pd.read_csv('10k_topology_files/nodes_to_BA_state.csv',header=0,index_col=0)
 
@@ -42,6 +43,12 @@ line_limit_scaling = [2000]
 BA_hurdle_scaling = [0]
 
 for y in years:
+    
+    for b in BAs_short: # change to select BA, year, etc.
+        
+        filename = '../demand/load_baseline_' + 'AVA' + '_' + str(2010) + '.csv'        
+        # read in load data - initially, these are 351x337 matrices, one for each BA, each year
+        df_BA_load = pd.read_csv(filename,header=0)
 
     for NN in NODE_NUMBER:
         
