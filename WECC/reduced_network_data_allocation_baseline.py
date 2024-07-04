@@ -224,12 +224,12 @@ for y in years:
                             
                             df_C = pd.concat([df_C,df_nodal_wind])
                                              
-                        df_C = pd.DataFrame(T_N)
-                        df_C.columns = df_C.columns.map(str)
-                        df_C['bus'] = T_bus_names
-                        df_C.to_parquet('nodal_wind.parquet',index=False)   
+                    #df_C = pd.DataFrame(T_N)
+                    df_C.columns = df_C.columns.map(str)
+                    df_C['bus'] = T_bus_names
+                    df_C.to_parquet('nodal_wind.parquet',index=False)   
                         
-                        copy('nodal_wind.parquet',path)
+                    copy('nodal_wind.parquet',path)
 
 
                     # ##################################
@@ -262,12 +262,12 @@ for y in years:
                             
                             df_C = pd.concat([df_C,df_nodal_solar])
                                              
-                        df_C = pd.DataFrame(T_N)
-                        df_C.columns = df_C.columns.map(str)
-                        df_C['bus'] = T_bus_names
-                        df_C.to_parquet('nodal_solar.parquet',index=False)   
+                    #df_C = pd.DataFrame(T_N)
+                    df_C.columns = df_C.columns.map(str)
+                    df_C['bus'] = T_bus_names
+                    df_C.to_parquet('nodal_solar.parquet',index=False)   
                         
-                        copy('nodal_solar.parquet',path)                        
+                    copy('nodal_solar.parquet',path)                        
                     
                     # df_gen = pd.read_csv('10k_topology_files/10k_Gen.csv',header=0)
                     # MWMax = []
@@ -594,7 +594,11 @@ for y in years:
                     
                     #EIA plants
                     df_hydro = pd.read_csv('Hydro_gen_setup/EIA_302_WECC_hydro_plants.csv',header=0)
-                    df_hydro_ts = pd.read_csv('2000_2019_weekly_GOWEST_hydro_inputs_with_release_mult_and_storage_tuewk_updateror.csv',header=0)
+                    plantIDs = list(df_hydro['EIA_ID'])
+                    
+                    
+                    #identify nodes of hydro in reduced network
+                    
                     new_hydro_nodes = []
                     
                     for i in range(0,len(df_hydro)):
@@ -603,85 +607,150 @@ for y in years:
                         new_name = re.sub(r'[^A-Z]',r'',name)
                         bus = df_hydro.loc[i,'bus']
                         
+                        bn = 'bus_' + str(bus)
+                        
                         if bus in old_bus_num:
                             idx = old_bus_num.index(bus)
                             new_hydro_nodes.append(new_bus_num[idx])
                             pass
-                        elif bus in buses:
+                        elif bn in buses:
                             new_hydro_nodes.append(bus)
                         else:
                             print(name + ' Not found')
-                    
-                    # add mean/min/max by node
-                    H_min = np.zeros((52,len(buses)))
-                    H_max = np.zeros((52,len(buses)))
-                    H_mu = np.zeros((52,len(buses)))
-                    
-                    nhn = []
-                    for b in new_hydro_nodes:
-                        s = 'bus_' + str(b)
-                        nhn.append(s)
-                    df_hydro['new bus'] = nhn
-                    fn= 'EIA_bus_match' + str(NN) + '.csv'
-                    df_hydro.to_csv(fn)
-                    
-                    # pull hydropower data for specified year
-                    
-                    yearly_hydro = df_hydro_ts.loc[df_hydro_ts['year'] == y,:]
-                    
-                    # list of hydro buses in hydrologic data
-                    hydro_IDs = list(df_hydro_ts.loc[:,'EIA_ID'].unique())
-                    
-                    
-                    for i in range(0,len(df_hydro)):
-                        b = new_hydro_nodes[i]
-                        idx = buses.index(b)
-                        EIA_ID = df_hydro.loc[i,'EIA_ID']
-                        
-                        ts = yearly_hydro.loc[yearly_hydro['EIA_ID']==EIA_ID,:]
-                        
-                        if EIA_ID in hydro_IDs:
-                        
-                            if len(ts) > 52:
-                                ts = ts.iloc[:-1 , :]
-                            else:
-                                pass
+                            print(i)
                             
-                            H_min[:,idx] += ts['p_min']
-                            H_max[:,idx] += ts['p_max']
-                            H_mu[:,idx] += ts['p_avg']
+                    df_hydro['new_node'] = new_hydro_nodes
+                        
+                    for node in l_nodes:
+                        
+                        dams = list(df_hydro.loc[df_hydro['new_node']==node,'EIA_ID'])
+                            
+                        for plant in dams:
+                            
+                            filename = '../Cornell_forecast_data/flow/baseline_351by337/flow_baseline_' + str(plant) + '_' + str(y) + '.parquet'
+                        
+                            try:
+                                
+                                df_plant_hydro = pd.read_parquet(filename)
+                                
+                            except:
+                                
+                                plant_hydro = np.zeros((351,15))
+                                df_plant_hydro = pd.DataFrame(plant_hydro)
+                            
+                            if dams.index(plant) < 1:
+                                df_T = df_plant_hydro.copy(deep=True)
+                            else:
+                                df_T = df_T + df_plant_hydro
+                            
+                        if l_nodes.index(node) < 1:
+                            
+                            df_C = df_T.copy(deep=True)
+                        
                         else:
-                            pass
+                            
+                            df_C = pd.concat([df_C,df_T])   
                     
-                    # create time series by node
-                    H_min_hourly = np.zeros((52,len(buses)))
-                    H_max_hourly = np.zeros((52,len(buses)))
-                    H_mu_hourly = np.zeros((52,len(buses)))
+                                             
+                    #df_C = pd.DataFrame(T_N)
+                    df_C.columns = df_C.columns.map(str)
+                    df_C['bus'] = T_bus_names
+                    df_C.to_parquet('nodal_hydro.parquet',index=False)   
+                        
+                    copy('nodal_hydro.parquet',path)
+
+      ####################       
                     
-                    for i in range(0,len(H_min)):
-                        for j in range(0,len(buses)):
-                            H_min_hourly[i,j] = H_min[i,j]
-                            H_max_hourly[i,j] = H_max[i,j]
-                            H_mu_hourly[i,j] = H_mu[i,j]*168
+                    # #EIA plants
+                    # df_hydro = pd.read_csv('Hydro_gen_setup/EIA_302_WECC_hydro_plants.csv',header=0)
+                    # df_hydro_ts = pd.read_csv('2000_2019_weekly_GOWEST_hydro_inputs_with_release_mult_and_storage_tuewk_updateror.csv',header=0)
+                    # new_hydro_nodes = []
+                    
+                    # for i in range(0,len(df_hydro)):
+                        
+                    #     name = df_hydro.loc[i,'plant']
+                    #     new_name = re.sub(r'[^A-Z]',r'',name)
+                    #     bus = df_hydro.loc[i,'bus']
+                        
+                    #     if bus in old_bus_num:
+                    #         idx = old_bus_num.index(bus)
+                    #         new_hydro_nodes.append(new_bus_num[idx])
+                    #         pass
+                    #     elif bus in buses:
+                    #         new_hydro_nodes.append(bus)
+                    #     else:
+                    #         print(name + ' Not found')
+                    
+                    # # add mean/min/max by node
+                    # H_min = np.zeros((52,len(buses)))
+                    # H_max = np.zeros((52,len(buses)))
+                    # H_mu = np.zeros((52,len(buses)))
+                    
+                    # nhn = []
+                    # for b in new_hydro_nodes:
+                    #     s = 'bus_' + str(b)
+                    #     nhn.append(s)
+                    # df_hydro['new bus'] = nhn
+                    # fn= 'EIA_bus_match' + str(NN) + '.csv'
+                    # df_hydro.to_csv(fn)
+                    
+                    # # pull hydropower data for specified year
+                    
+                    # yearly_hydro = df_hydro_ts.loc[df_hydro_ts['year'] == y,:]
+                    
+                    # # list of hydro buses in hydrologic data
+                    # hydro_IDs = list(df_hydro_ts.loc[:,'EIA_ID'].unique())
+                    
+                    
+                    # for i in range(0,len(df_hydro)):
+                    #     b = new_hydro_nodes[i]
+                    #     idx = buses.index(b)
+                    #     EIA_ID = df_hydro.loc[i,'EIA_ID']
+                        
+                    #     ts = yearly_hydro.loc[yearly_hydro['EIA_ID']==EIA_ID,:]
+                        
+                    #     if EIA_ID in hydro_IDs:
+                        
+                    #         if len(ts) > 52:
+                    #             ts = ts.iloc[:-1 , :]
+                    #         else:
+                    #             pass
+                            
+                    #         H_min[:,idx] += ts['p_min']
+                    #         H_max[:,idx] += ts['p_max']
+                    #         H_mu[:,idx] += ts['p_avg']
+                    #     else:
+                    #         pass
+                    
+                    # # create time series by node
+                    # H_min_hourly = np.zeros((52,len(buses)))
+                    # H_max_hourly = np.zeros((52,len(buses)))
+                    # H_mu_hourly = np.zeros((52,len(buses)))
+                    
+                    # for i in range(0,len(H_min)):
+                    #     for j in range(0,len(buses)):
+                    #         H_min_hourly[i,j] = H_min[i,j]
+                    #         H_max_hourly[i,j] = H_max[i,j]
+                    #         H_mu_hourly[i,j] = H_mu[i,j]*168
                               
-                    h_buses = []
-                    for i in range(0,len(buses)):
-                        h_buses.append('bus_' + str(buses[i]))
+                    # h_buses = []
+                    # for i in range(0,len(buses)):
+                    #     h_buses.append('bus_' + str(buses[i]))
                     
-                    H_min_df = pd.DataFrame(H_min_hourly)
-                    H_min_df.columns = h_buses
-                    H_max_df = pd.DataFrame(H_max_hourly)
-                    H_max_df.columns = h_buses
-                    H_mu_df = pd.DataFrame(H_mu_hourly) 
-                    H_mu_df.columns = h_buses       
+                    # H_min_df = pd.DataFrame(H_min_hourly)
+                    # H_min_df.columns = h_buses
+                    # H_max_df = pd.DataFrame(H_max_hourly)
+                    # H_max_df.columns = h_buses
+                    # H_mu_df = pd.DataFrame(H_mu_hourly) 
+                    # H_mu_df.columns = h_buses       
                     
-                    H_min_df.to_csv('Hydro_min.csv',index=None)
-                    H_max_df.to_csv('Hydro_max.csv',index=None)
-                    H_mu_df.to_csv('Hydro_total.csv',index=None)
+                    # H_min_df.to_csv('Hydro_min.csv',index=None)
+                    # H_max_df.to_csv('Hydro_max.csv',index=None)
+                    # H_mu_df.to_csv('Hydro_total.csv',index=None)
                     
-                    copy('Hydro_min.csv',path)
-                    copy('Hydro_max.csv',path)
-                    copy('Hydro_total.csv',path)
+                    # copy('Hydro_min.csv',path)
+                    # copy('Hydro_max.csv',path)
+                    # copy('Hydro_total.csv',path)
                     
                         
                     
