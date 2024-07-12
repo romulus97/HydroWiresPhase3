@@ -198,6 +198,7 @@ for y in years:
                     # # WIND nodal setup
                     
                     nodes = df_selected['bus_i']
+                    l_nodes = list(nodes)
                                  
                     for node in nodes:
                         
@@ -214,7 +215,7 @@ for y in years:
                             nodal_wind = np.zeros((351,337))
                             df_nodal_wind = pd.DataFrame(nodal_wind)
                     
-                        l_nodes = list(nodes)
+
                         
                         if l_nodes.index(node) < 1:
                             
@@ -236,6 +237,7 @@ for y in years:
                     # # Solar nodal setup
                     
                     nodes = df_selected['bus_i']
+                    l_nodes = list(nodes)
                                  
                     for node in nodes:
                         
@@ -252,8 +254,7 @@ for y in years:
                             nodal_solar = np.zeros((351,337))
                             df_nodal_solar = pd.DataFrame(nodal_solar)
                     
-                        l_nodes = list(nodes)
-                        
+                       
                         if l_nodes.index(node) < 1:
                             
                             df_C = df_nodal_solar.copy(deep=True)
@@ -622,8 +623,13 @@ for y in years:
                     df_hydro['new_node'] = new_hydro_nodes
                         
                     for node in l_nodes:
+                   # for node in new_hydro_nodes:
                         
                         dams = list(df_hydro.loc[df_hydro['new_node']==node,'EIA_ID'])
+                        
+                        if len(dams) < 1:
+                            
+                            dams.append('dummy')
                             
                         for plant in dams:
                             
